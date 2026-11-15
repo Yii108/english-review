@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="英文複習本">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>英文複習本</title>
 <style>/* Bootstrap 5.3 · Bootswatch Litera (MIT) */
@@ -30,8 +32,10 @@
   --amber:var(--bs-warning-text-emphasis); --amber-soft:var(--bs-warning-bg-subtle); --blue:var(--bs-info-text-emphasis); --blue-soft:var(--bs-info-bg-subtle);
   --r:.9rem; --shadow:0 .125rem .5rem rgba(33,37,41,.06);
 }
-body{background:var(--bg);line-height:1.55}
-.en{font-family:Georgia,Cambria,"Times New Roman",serif}
+:root{--bs-body-font-family:"Lora","LXGW WenKai TC",-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif}
+body{background:var(--bg);line-height:1.6;font-family:var(--bs-body-font-family)}
+p{font-family:inherit}
+.en{font-family:"Lora",Georgia,serif}
 .wrap{max-width:720px;margin:0 auto;padding:0 16px 96px}
 header.top{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;background:var(--paper);border-bottom:1px solid var(--line);margin:0 -16px 16px;padding:10px 16px}
 header.top h1{font-size:1.15rem;margin:0;font-weight:700}
