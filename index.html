@@ -160,6 +160,9 @@ body.offline #trBtn{opacity:.5}
 .exp-h{font-size:.72rem;font-weight:700;color:var(--accent);letter-spacing:.05em;margin-bottom:4px}
 .exp-tr{font-size:1rem;line-height:1.6}
 .exp-why{font-size:.875rem;color:var(--muted);margin-top:6px;line-height:1.6}
+.vtip{margin-top:12px}
+.vtip summary{cursor:pointer;color:var(--accent);font-size:.875rem;font-weight:600}
+.vtip .sub{margin-top:6px;line-height:1.7}
 .hidden{display:none!important}
 @media (max-width:480px){.qmain{font-size:1.75rem}.big{font-size:2.5rem}.stat b{font-size:1.2rem}.stat span{font-size:.68rem}}
 </style>
@@ -281,7 +284,11 @@ const I18N = {
     s_sample:"範例筆記", s_sample_help:"試玩用的範例筆記可以在這裡一次刪除。",
     p_rate:"語速", p_vol:"音量", p_accent:"口音", p_us:"美式", p_uk:"英式", p_syl:"音節", p_play:"播放", p_slow:"慢速", p_ex_play:"例句",
     p_loading:"查詢音標中…", p_fail:"暫時查不到音標，可以在編輯筆記時自己填。", p_none:"還沒有音標。可以在編輯筆記時自己填，或允許 AI 自動查詢。",
-    s_pron:"發音", p_test:"試聽", p_fill:"幫全部筆記查音標（AI）", p_fill_none:"所有筆記都有音標了",
+    s_pron:"發音", v_engine:"語音來源", v_claude:"Claude 自然語音", v_device:"裝置語音", v_claude_voice:"Claude 語音音色",
+    tv_buttery:"溫潤", tv_airy:"輕柔", tv_glassy:"清亮", tv_rounded:"圓潤", v_device_voice:"裝置語音（⭐ 為較自然的語音）", v_auto:"自動挑最自然的",
+    v_rec:"單字優先播放真人錄音（需要網路，來自免費字典）",
+    v_tip_t:"想讓手機語音更自然？",
+    v_tip:"iPhone／iPad：設定 → 輔助使用 → 朗讀內容 → 聲音 → 英文，下載標示「高品質」或「增強」的語音（例如 Ava、Zoe、Evan），回來在上面選它。<br>Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音。<br>Android：設定 → 文字轉語音 → 選 Google 語音服務，並下載英文的高品質語音。<br>Windows：用 Edge 瀏覽器打開，會有「Natural」自然語音可選。", p_test:"試聽", p_fill:"幫全部筆記查音標（AI）", p_fill_none:"所有筆記都有音標了",
     p_fill_prog:(a,b)=>`查詢中… ${a}/${b}`, p_fill_done:n=>`完成，已補上 ${n} 則音標`,
     f_ipa:"音標（選填，留空會在點單字時自動查）", f_ipa_ph:"例：/rɪˈzɪliənt/",
     select:"選取", sel_all:n=>`全選 (${n})`, sel_none:"取消全選", sel_n:n=>`已選 ${n} 則`, del_sel:n=>`刪除 ${n} 則`,
@@ -378,7 +385,11 @@ const I18N = {
     s_sample:"Sample notes", s_sample_help:"Remove the sample notes you loaded to try things out.",
     p_rate:"Speed", p_vol:"Volume", p_accent:"Accent", p_us:"US", p_uk:"UK", p_syl:"Syllables", p_play:"Play", p_slow:"Slow", p_ex_play:"Example",
     p_loading:"Looking up pronunciation…", p_fail:"Couldn't get the pronunciation right now — you can type it in when editing the note.", p_none:"No phonetics yet. Type them in when editing the note, or allow AI to look them up.",
-    s_pron:"Pronunciation", p_test:"Test", p_fill:"Look up phonetics for all notes (AI)", p_fill_none:"Every note already has phonetics",
+    s_pron:"Pronunciation", v_engine:"Voice source", v_claude:"Claude natural voice", v_device:"Device voice", v_claude_voice:"Claude voice",
+    tv_buttery:"Buttery", tv_airy:"Airy", tv_glassy:"Glassy", tv_rounded:"Rounded", v_device_voice:"Device voice (⭐ = more natural)", v_auto:"Pick the most natural automatically",
+    v_rec:"Use real human recordings for single words (needs internet, from a free dictionary)",
+    v_tip_t:"Make your phone's voice sound more natural",
+    v_tip:"iPhone/iPad: Settings → Accessibility → Spoken Content → Voices → English, and download a voice marked Premium or Enhanced (e.g. Ava, Zoe, Evan), then pick it above.<br>Mac: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices.<br>Android: Settings → Text-to-speech → Speech Services by Google, and download a high-quality English voice.<br>Windows: open the page in Edge for its “Natural” voices.", p_test:"Test", p_fill:"Look up phonetics for all notes (AI)", p_fill_none:"Every note already has phonetics",
     p_fill_prog:(a,b)=>`Looking up… ${a}/${b}`, p_fill_done:n=>`Done — added phonetics to ${n} notes`,
     f_ipa:"Phonetics (optional — looked up automatically when you tap the word)", f_ipa_ph:"e.g. /rɪˈzɪliənt/",
     select:"Select", sel_all:n=>`Select all (${n})`, sel_none:"Clear selection", sel_n:n=>`${n} selected`, del_sel:n=>`Delete ${n}`,
@@ -519,6 +530,7 @@ function playAudio(url){
 const DIAG = { runtime: null, db: null, user: null, sample: null, ua: navigator.userAgent };
 async function init(){
   DIAG.runtime = !!(window.claude && window.claude.use);
+  if (DIAG.runtime) window.claude.use("tts").then(x => { if (x) { S.tts = x; if (S.view === "settings") render(); } }, () => {});
   if (DIAG.runtime) window.claude.use("sample").then(f => { DIAG.sample = !!f; }, () => { DIAG.sample = false; });
   Promise.resolve(window.claude && window.claude.use ? window.claude.use("sample") : null).then(fn => { if (fn) { S.sample = fn; if (S.view === "add" && !document.activeElement?.closest?.("form")) renderAdd($("#view")); } }).catch(()=>{});
   let timedOut = false;
@@ -801,6 +813,7 @@ function pickMode(c, scheduled){
   return canChoice ? "choice" : (scheduled ? "type" : "flip");
 }
 function startReview(list, scheduled){
+  if (STANDALONE && !isOffline() && S.settings.useRec !== false) (async () => { for (const c of list.slice(0, 15)) { if (/^[A-Za-z'-]+$/.test(c.front.trim()) && !(c.pron && c.pron.for === c.front)) { await freePron(c).catch(() => {}); await new Promise(r => setTimeout(r, 150)); } } })();
   genExamples(list.slice(0, scheduled ? S.settings.sessionMax : 20).filter(c => stk(c) >= 1 || nRight(c) >= 1 || list.length <= 20));
   const queue = list.slice(0, scheduled ? S.settings.sessionMax : 20).map(c => c.id);
   S.review = { queue, scheduled, total: queue.length, done: 0, correct: 0, cur: null, state: "ask", mode: null, wrongIds: new Set(), seen: new Set() };
@@ -819,7 +832,7 @@ function nextQ(){
     const others = shuffle([...S.cards.values()].filter(x => x.id !== c.id && x.back !== c.back)).slice(0,3);
     r.options = shuffle([c, ...others]).map(x => ({ id:x.id, text:x.back }));
   }
-  if (r.mode === "listen") setTimeout(() => { if (S.review === r && r.state === "ask") speak(S.cards.get(r.cur)?.front || ""); }, 250);
+  if (r.mode === "listen") setTimeout(() => { if (S.review === r && r.state === "ask") speakWord(S.cards.get(r.cur)); }, 250);
 }
 function norm(s){ return String(s||"").toLowerCase().replace(/[’']/g,"'").replace(/[.,!?;:"]/g,"").replace(/\s+/g," ").trim(); }
 function lev(a,b){
@@ -828,18 +841,68 @@ function lev(a,b){
   for (let i=1;i<=m;i++){ const cur=[i]; for (let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; }
   return prev[n];
 }
-function pickVoice(lang){
-  try{ const vs = speechSynthesis.getVoices(); return vs.find(v => v.lang === lang && /natural|enhanced|premium|google/i.test(v.name)) || vs.find(v => v.lang === lang) || vs.find(v => v.lang && v.lang.replace("_","-").startsWith(lang)) || null; }catch(e){ return null; }
+/* ---------- speech: Claude voice → human recording → best device voice ---------- */
+const NOVELTY = /Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|\bFred\b|Junior|Ralph|Kathy|Grandma|Grandpa|\bReed\b|Rocko|Sandy|Shelley|\bFlo\b|\bEddy\b/i;
+function voiceScore(v){
+  const n = v.name; let s = 0;
+  if (/premium/i.test(n)) s += 60; if (/enhanced|neural|natural/i.test(n)) s += 45; if (/siri/i.test(n)) s += 40;
+  if (/google/i.test(n)) s += 30; if (/online/i.test(n)) s += 20;
+  if (/Samantha|Ava|Zoe|Allison|Susan|Evan|Nathan|Tom|Serena|Daniel|Kate|Oliver|Arthur|Martha|Aria|Jenny|Guy|Sonia|Ryan|Libby/.test(n)) s += 8;
+  if (NOVELTY.test(n)) s -= 100; if (/compact|eloquence/i.test(n)) s -= 25;
+  return s;
 }
-try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; }catch(e){}
+function englishVoices(){ try{ return speechSynthesis.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang)); }catch(e){ return []; } }
+function pickVoice(lang){
+  const vs = englishVoices(); if (!vs.length) return null;
+  if (S.settings.voiceName){ const v = vs.find(x => x.name === S.settings.voiceName); if (v) return v; }
+  const pref = vs.filter(v => v.lang.replace("_","-").toLowerCase().startsWith(lang.toLowerCase()));
+  return (pref.length ? pref : vs).slice().sort((a,b) => voiceScore(b) - voiceScore(a))[0];
+}
+try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => { const sel = document.getElementById("voiceSel"); if (sel) sel.innerHTML = voiceOptions(); }; }catch(e){}
 function speakable(text){ return String(text||"").replace(/\.\.\.|[+…~～/|]/g, ", ").replace(/\b(sb|sth)\b/gi, m => m.toLowerCase()==="sb" ? "somebody" : "something").replace(/\bV-?ing\b/g, "doing").replace(/\bp\.p\./gi, "past participle"); }
-function speak(text, slow, queue){
-  try{
-    const st = S.settings, u = new SpeechSynthesisUtterance(speakable(text));
-    u.lang = st.accent || "en-US"; const v = pickVoice(u.lang); if (v) u.voice = v;
-    u.rate = Math.max(.3, Math.min(2, (st.rate || 1) * (slow ? .6 : 1))); u.volume = st.volume ?? 1;
-    if (!queue) speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }catch(e){ toast(t("no_speech")); }
+let sayToken = 0, curAudio = null;
+function stopSpeech(){ sayToken++; try{ curAudio && curAudio.pause(); }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} }
+const useClaudeVoice = () => !!S.tts && S.settings.engine !== "device";
+const clampR = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+async function sayOne(it, tok){
+  if (tok !== sayToken) return;
+  const rate = (S.settings.rate || 1) * (it.slow ? .72 : 1);
+  if (it.url){
+    await new Promise(res => { try{ const a = new Audio(it.url); curAudio = a; a.volume = S.settings.volume ?? 1; a.playbackRate = clampR(rate, .5, 2); a.preservesPitch = true;
+      a.onended = a.onerror = () => res(); a.play().catch(() => res()); setTimeout(res, 8000); }catch(e){ res(); } });
+    return;
+  }
+  const text = speakable(it.text); if (!text.trim()) return;
+  if (useClaudeVoice()){
+    try{ await S.tts.speak(text, { voice: S.settings.ttsVoice || "buttery", rate: clampR(rate, .7, 1.5), language: "en" }); return; }
+    catch(e){
+      const code = e && e.code;
+      if (code === "not_granted") { S.tts = null; S.ttsOff = true; return; }      // the viewer turned reading aloud off: respect it
+      if (code === "stopped" || code === "invalid_argument") return;
+      // no_gesture / busy / rate_limited / unavailable / upstream_error → use the device voice this time
+    }
+  }
+  if (S.ttsOff) return;
+  await new Promise(res => { try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = S.settings.accent || "en-US"; const v = pickVoice(u.lang); if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = clampR(rate * .95, .3, 2); u.pitch = 1; u.volume = S.settings.volume ?? 1;
+    u.onend = u.onerror = () => res(); speechSynthesis.speak(u); setTimeout(res, 1500 + text.length * 110 / u.rate);
+  }catch(e){ toast(t("no_speech")); res(); } });
+}
+async function sayList(list){ stopSpeech(); const tok = sayToken; for (const it of list){ if (tok !== sayToken) return; await sayOne(it, tok); } }
+function speak(text, slow){ return sayList([{ text, slow }]); }
+function wordItem(c, slow){
+  const p = c && c.pron && c.pron.for === c.front ? c.pron : null;
+  const url = p && (S.settings.accent === "en-GB" ? (p.audioUk || p.audioUs) : (p.audioUs || p.audioUk));
+  return url && STANDALONE && S.settings.useRec !== false && !isOffline() ? { url, slow } : { text: c.front, slow };
+}
+function speakWord(c, slow){ return sayList([wordItem(c, slow)]); }
+function voiceOptions(){
+  const vs = englishVoices().slice().sort((a,b) => voiceScore(b) - voiceScore(a));
+  const best = pickVoice(S.settings.accent || "en-US");
+  return `<option value="">${t("v_auto")}${best && !S.settings.voiceName ? "（" + esc(best.name) + "）" : ""}</option>` +
+    vs.map(v => `<option value="${esc(v.name)}" ${S.settings.voiceName === v.name ? "selected" : ""}>${voiceScore(v) >= 30 ? "⭐ " : ""}${esc(v.name)} · ${esc(v.lang)}</option>`).join("");
 }
 function pronControls(){
   const st = S.settings;
@@ -847,11 +910,19 @@ function pronControls(){
     <div class="hrow" style="gap:8px;flex-wrap:nowrap"><span>🐢</span><input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="${st.rate||1}" style="flex:1"><span>🐇</span></div>
     <label>${t("p_vol")} <b id="volV">${Math.round((st.volume??1)*100)}%</b></label>
     <div class="hrow" style="gap:8px;flex-wrap:nowrap"><span>🔈</span><input type="range" id="vol" min="0" max="1" step="0.1" value="${st.volume??1}" style="flex:1"><span>🔊</span></div>
-    <label>${t("p_accent")}</label>
-    <div class="seg" id="accent"><button type="button" class="${st.accent!=="en-GB"?"on":""}" data-a="en-US">${t("p_us")}</button><button type="button" class="${st.accent==="en-GB"?"on":""}" data-a="en-GB">${t("p_uk")}</button></div>`;
+    ${S.tts ? `<label>${t("v_engine")}</label>
+    <div class="seg" id="engine"><button type="button" class="${S.settings.engine!=="device"?"on":""}" data-e="claude">✨ ${t("v_claude")}</button><button type="button" class="${S.settings.engine==="device"?"on":""}" data-e="device">${t("v_device")}</button></div>
+    ${S.settings.engine!=="device" ? `<label>${t("v_claude_voice")}</label><div class="seg" id="ttsVoice">${["buttery","airy","glassy","rounded"].map(k=>`<button type="button" class="${(S.settings.ttsVoice||"buttery")===k?"on":""}" data-v="${k}">${t("tv_"+k)}</button>`).join("")}</div>` : ""}` : ""}
+    ${!useClaudeVoice() ? `<label>${t("v_device_voice")}</label><select id="voiceSel">${voiceOptions()}</select>` : ""}
+    ${useClaudeVoice() ? "" : `<label>${t("p_accent")}</label>
+    <div class="seg" id="accent"><button type="button" class="${st.accent!=="en-GB"?"on":""}" data-a="en-US">${t("p_us")}</button><button type="button" class="${st.accent==="en-GB"?"on":""}" data-a="en-GB">${t("p_uk")}</button></div>`}`;
 }
 function bindPronControls(root, sample){
   const st = S.settings;
+  const redraw = () => { const card = root.closest ? (root.id === "pronCard" ? root : null) : null; if (card) { renderSettings($("#view")); } else { const h = root.querySelector("#pronCtl"); if (h) { h.innerHTML = pronControls(); bindPronControls(root, sample); } } };
+  root.querySelectorAll("#engine button").forEach(b => b.onclick = () => { st.engine = b.dataset.e === "device" ? "device" : "claude"; saveSettings(); redraw(); speak(sample); });
+  root.querySelectorAll("#ttsVoice button").forEach(b => b.onclick = () => { st.ttsVoice = b.dataset.v; saveSettings(); root.querySelectorAll("#ttsVoice button").forEach(x => x.classList.toggle("on", x===b)); speak(sample); });
+  const vsel = root.querySelector("#voiceSel"); if (vsel) vsel.onchange = () => { st.voiceName = vsel.value; saveSettings(); speak(sample); };
   const r = root.querySelector("#rate"), vo = root.querySelector("#vol");
   r.oninput = () => { st.rate = +r.value; root.querySelector("#rateV").textContent = st.rate.toFixed(1) + "×"; };
   vo.oninput = () => { st.volume = +vo.value; root.querySelector("#volV").textContent = Math.round(st.volume*100) + "%"; };
@@ -900,14 +971,14 @@ function openPron(id){
       ${c0.example ? `<button class="btn btn-outline-primary" id="pEx">▶ ${t("p_ex_play")}</button>` : ""}
     </div>
     ${c0.example ? `<div class="ex en sub" style="margin-top:8px;font-style:italic">${esc(c0.example)}</div>` : ""}
-    <div style="margin-top:6px">${pronControls()}</div>
+    <div style="margin-top:6px" id="pronCtl">${pronControls()}</div>
   </div>`;
   document.body.appendChild(m);
   const close = () => { try{ speechSynthesis.cancel(); }catch(e){} m.remove(); };
   m.onclick = e => { if (e.target === m) close(); };
   $("#pClose").onclick = close;
-  $("#pPlay").onclick = () => speak(c0.front);
-  $("#pSlow").onclick = () => speak(c0.front, true);
+  $("#pPlay").onclick = () => speakWord(S.cards.get(id) || c0);
+  $("#pSlow").onclick = () => speakWord(S.cards.get(id) || c0, true);
   const ex = $("#pEx"); if (ex) ex.onclick = () => speak(c0.example);
   bindPronControls(m, c0.front);
   const info = $("#pInfo");
@@ -924,7 +995,7 @@ function openPron(id){
         if (["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e && e.code)) S.sample = null;
         info.innerHTML = `<div class="sub">${e && e.code === "rate_limited" ? t("ai_rate") : canPron() ? t("p_fail") : t("p_none")}</div><a class="btn btn-outline-primary btn-sm" style="margin-top:8px;display:inline-block;text-decoration:none" href="${dictUrl(c0.front)}" target="_blank" rel="noopener">📖 ${t("dict")}</a>`; });
   }
-  speak(c0.front);
+  speakWord(c0);
 }
 
 /* ---------- example explanation (translation + how the word is used) ---------- */
@@ -974,11 +1045,12 @@ function autoPlay(r, c, spell, cz){
   const key = r.cur + ":" + r.state + ":" + r.done; if (r.spoken === key) return; r.spoken = key;
   const ex = cz ? cz.sentence : (c.example || "").split(/\s*\/\s*/)[0];
   if (r.state === "ask"){
-    if (r.mode === "choice" || r.mode === "flip") speak(c.front);         // spelling questions stay silent so the answer isn't given away
+    if (r.mode === "choice" || r.mode === "flip") speakWord(c);           // spelling questions stay silent so the answer isn't given away
   } else if (r.state === "shown"){
-    const first = spell;                                                 // word not heard yet in spelling modes
-    if (first) speak(c.front);
-    if (ap === "both" && ex) speak(ex, false, first);
+    const list = [];
+    if (spell) list.push(wordItem(c));                                   // word not heard yet in spelling modes
+    if (ap === "both" && ex) list.push({ text: ex });
+    if (list.length) sayList(list);
   }
 }
 function slotHint(front, reveal){
@@ -1033,11 +1105,11 @@ function renderReview(v){
   }
   v.innerHTML = `<div class="rv-top"><button class="btn btn-outline-primary btn-sm" id="quit">✕</button><div class="bar"><i style="width:${pct}%"></i></div><span class="sub">${r.done}/${r.total}</span></div>
     <div class="card qcard">${body}</div>${foot}`;
-  $("#quit").onclick = () => { S.review = null; location.hash = "today"; };
-  v.querySelectorAll("[data-say]").forEach(b => b.onclick = e => { e.stopPropagation(); speak(c.front); });
+  $("#quit").onclick = () => { stopSpeech(); S.review = null; location.hash = "today"; };
+  v.querySelectorAll("[data-say]").forEach(b => b.onclick = e => { e.stopPropagation(); speakWord(c); });
   if (cz && r.state === "shown") { const sp = document.createElement("button"); sp.className = "speak"; sp.textContent = "🔊"; sp.title = t("speak"); sp.onclick = () => speak(cz.sentence); v.querySelector(".cloze")?.appendChild(sp); }
   v.querySelectorAll("[data-pron]").forEach(w => w.onclick = e => { e.stopPropagation(); openPron(w.dataset.pron); });
-  const lp = $("#lPlay"); if (lp) { lp.onclick = () => speak(c.front); $("#lSlow").onclick = () => speak(c.front, true); }
+  const lp = $("#lPlay"); if (lp) { lp.onclick = () => speakWord(c); $("#lSlow").onclick = () => speakWord(c, true); }
   autoPlay(r, c, spell, cz);
   if (r.state === "shown") fillExplain(r, c, cz);
   const rv = $("#reveal"); if (rv) rv.onclick = () => { r.state = "shown"; render(); };
@@ -1501,6 +1573,8 @@ function renderSettings(v){
     <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px;margin-top:14px"><input type="checkbox" id="genEx" ${st.genEx!==false?"checked":""}> ${t("s_gen")}</label>
     <p class="sub" style="margin:4px 0 0">${S.sample ? t("s_gen_ai") : STANDALONE ? t("s_gen_dict") : t("s_gen_none")}</p></div>
   <div class="card" id="pronCard"><h2>${t("s_pron")}</h2>${pronControls()}
+    ${STANDALONE ? `<label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px;margin-top:14px"><input type="checkbox" id="useRec" ${S.settings.useRec!==false?"checked":""}> ${t("v_rec")}</label>` : ""}
+    <details class="vtip"><summary>${t("v_tip_t")}</summary><div class="sub">${t("v_tip")}</div></details>
     <div class="hrow" style="margin-top:12px"><button class="btn btn-soft btn-sm" type="button" id="pTest">▶ ${t("p_test")}</button>
     ${canPron() ? `<button class="btn btn-outline-primary btn-sm" type="button" id="fillPron">${S.sample ? t("p_fill") : t("p_fill_free")}</button>` : ""}</div>
     <div class="sub hidden" id="fillSt" style="margin-top:8px"></div></div>
@@ -1526,6 +1600,7 @@ function renderSettings(v){
   $("#autoTr").onchange = e => { S.settings.autoTr = e.target.checked; saveSettings(); };
   document.querySelectorAll("#mode button").forEach(b => b.onclick = () => { st.mode = b.dataset.m; saveSettings(); renderSettings(v); });
   document.querySelectorAll("#max button").forEach(b => b.onclick = () => { st.sessionMax = +b.dataset.n; saveSettings(); renderSettings(v); });
+  const ur = $("#useRec"); if (ur) ur.onchange = e => { S.settings.useRec = e.target.checked; saveSettings(); };
   $("#genEx").onchange = e => { st.genEx = e.target.checked; saveSettings(); };
   document.querySelectorAll("#autoPlay button").forEach(b => b.onclick = () => { st.autoPlay = b.dataset.a; saveSettings(); renderSettings(v); if (b.dataset.a !== "off") speak(b.dataset.a === "both" ? "resilient. She's remarkably resilient after setbacks." : "resilient"); });
   bindPronControls($("#pronCard"), "Practice makes perfect.");
