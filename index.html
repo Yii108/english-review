@@ -152,6 +152,10 @@ mark{background:#fff3bf;color:inherit;padding:0 1px;border-radius:3px}
 .snip{font-size:.8rem;color:var(--muted);margin-top:2px}
 .sync.offb{background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)}
 body.offline #trBtn{opacity:.5}
+.cloze{font-size:1.35rem;line-height:1.7;margin-top:6px}
+.cloze .blank{display:inline-block;letter-spacing:.08em;color:var(--accent);font-weight:700;border-bottom:2px solid var(--accent);padding:0 4px;margin:0 2px}
+.cloze .speak{width:30px;height:30px;font-size:.85rem}
+.srcl{font-size:.75rem;background:var(--amber-soft);color:var(--amber);padding:1px 8px;border-radius:2rem}
 .hidden{display:none!important}
 @media (max-width:480px){.qmain{font-size:1.75rem}.big{font-size:2.5rem}.stat b{font-size:1.2rem}.stat span{font-size:.68rem}}
 </style>
@@ -207,7 +211,9 @@ const I18N = {
     next7:"未來 7 天的複習量", weekdays:"日一二三四五六",
     fp_title:"自由練習", fp_sub:"不影響複習排程，想多練就練。", fp_scope:"範圍",
     fp_all:"全部隨機", fp_weak:"常錯的", fp_new:"最近新增", cancel:"取消", go:"開始", fp_none:"這個範圍目前沒有筆記",
-    q_flip:"看英文，想中文", q_type:"看意思，拼出英文", q_choice:"選出正確的意思", q_listen:"聽發音，拼出英文", q_free:" · 自由練習",
+    q_flip:"看英文，想中文", q_type:"看意思，拼出英文", q_choice:"選出正確的意思", q_listen:"聽發音，拼出英文", q_cloze:"看例句，填入單字", cz_src_ai:"✨ AI 新例句", cz_src_dict:"📖 字典例句",
+    s_gen:"例句填空自動產生新例句", s_gen_ai:"會用 AI 為每則筆記產生 3 句新例句，輪流出題；都考過後會再換一批。你自己寫的例句也會偶爾出現。",
+    s_gen_dict:"這個版本沒有 AI：單字會從免費字典找例句來出題；片語和句型則用你自己寫的例句。", s_gen_none:"目前沒有 AI，填空只會用你自己寫的例句。", cz_mean:"意思：", v_form:w=>`≈ 單字對了，但這句要用「${w}」`, q_free:" · 自由練習",
     speak:"發音", type_ph:"輸入英文…", confirm:"確認", dunno:"不會", reveal:"看答案",
     v_ok:"✓ 答對了", v_close:"≈ 差一點（有小拼錯）", v_hint:"✓ 答對了（有用提示）",
     hint:"提示", n_letters:n=>`共 ${n} 個字母`, next_q:"下一題", you_typed:"你寫的：", fg_no:"不記得", fg_yes:"記得",
@@ -253,8 +259,10 @@ const I18N = {
     deleted:"已刪除", reset_done:"已重設，今天會重新出題", saved:"已儲存",
     search_ph:"搜尋英文、意思、例句、筆記或音標…", found_n:(n,q)=>`「${q}」找到 ${n} 則`, lib_nomatch_q:q=>`找不到「${q}」`, add_from_q:q=>`新增「${q}」`, f_ex_s:"例句：", f_note_s:"筆記：", all:"全部", all_lv:"所有程度", count:n=>`${n} 則`,
     lib_nomatch:"沒有符合的筆記", lib_empty:"還沒有筆記，去「新增」加入第一則吧",
-    s_lang:"介面語言", s_mode:"抽考方式", m_mix:"自動", m_flip:"翻卡", m_type:"拼寫", m_choice:"選擇題", m_listen:"聽音拼寫",
-    s_mode_help:"每日抽考只出會自動對答案的題目。「自動」會依熟悉程度出題：還不熟的先考選擇題，答對過之後改考拼寫（看中文拼，或聽發音拼）。翻卡只會出現在自由練習。",
+    s_lang:"介面語言", s_mode:"抽考方式", m_mix:"自動", m_flip:"翻卡", m_type:"拼寫", m_choice:"選擇題", m_listen:"聽音拼寫", m_cloze:"例句填空",
+    s_mode_help:"每日抽考只出會自動對答案的題目。「自動」會依熟悉程度出題：還不熟的先考選擇題，答對過之後改考拼寫（看意思拼、聽發音拼，或看例句填空）。有例句的筆記會比較常出例句填空。翻卡只會出現在自由練習。",
+    s_auto:"抽考時自動播放", ap_off:"關閉", ap_word:"單字", ap_both:"單字＋例句",
+    s_auto_help:"選擇題出題時就會唸出單字；拼寫和填空題會等你作答後才唸，避免提前聽到答案。選「單字＋例句」會接著唸例句。",
     s_max:"每次抽考最多幾題", s_remind:"每日提醒",
     s_remind_help:"網頁沒辦法自己跳通知，最簡單的做法是在行事曆加一個每天重複的提醒。",
     s_cal:"加到 Google 行事曆（每天）", cal_title:"📒 英文複習時間", cal_body:"打開「英文複習本」完成今天的抽考",
@@ -300,7 +308,9 @@ const I18N = {
     next7:"Reviews in the next 7 days", weekdays:"SMTWTFS",
     fp_title:"Free practice", fp_sub:"Doesn't change your review schedule — practise as much as you like.", fp_scope:"What to practise",
     fp_all:"Random", fp_weak:"Often missed", fp_new:"Recently added", cancel:"Cancel", go:"Start", fp_none:"No notes in this group yet",
-    q_flip:"See English, recall the meaning", q_type:"See the meaning, spell the English", q_choice:"Pick the right meaning", q_listen:"Listen, then spell it", q_free:" · Free practice",
+    q_flip:"See English, recall the meaning", q_type:"See the meaning, spell the English", q_choice:"Pick the right meaning", q_listen:"Listen, then spell it", q_cloze:"Fill in the sentence", cz_src_ai:"✨ New AI sentence", cz_src_dict:"📖 Dictionary sentence",
+    s_gen:"Generate new sentences for fill-in-the-blank", s_gen_ai:"AI writes 3 new example sentences per note and rotates through them, with a fresh batch once they've all been used. Your own example still turns up sometimes.",
+    s_gen_dict:"No AI in this version: single words use example sentences from a free dictionary; phrases and patterns use your own example.", s_gen_none:"No AI right now, so fill-in-the-blank only uses your own examples.", cz_mean:"Meaning: ", v_form:w=>`≈ Right word — this sentence needs “${w}”`, q_free:" · Free practice",
     speak:"Pronounce", type_ph:"Type the English…", confirm:"Check", dunno:"Don't know", reveal:"Show answer",
     v_ok:"✓ Correct", v_close:"≈ Almost (small typo)", v_hint:"✓ Correct (with a hint)",
     hint:"Hint", n_letters:n=>`${n} letters`, next_q:"Next", you_typed:"You wrote:", fg_no:"Didn't know", fg_yes:"Knew it",
@@ -346,8 +356,10 @@ const I18N = {
     deleted:"Deleted", reset_done:"Reset — it'll be quizzed again today", saved:"Saved",
     search_ph:"Search English, meanings, examples, notes or phonetics…", found_n:(n,q)=>`${n} found for “${q}”`, lib_nomatch_q:q=>`Nothing found for “${q}”`, add_from_q:q=>`Add “${q}”`, f_ex_s:"Example: ", f_note_s:"Note: ", all:"All", all_lv:"All levels", count:n=>`${n} notes`,
     lib_nomatch:"No matching notes", lib_empty:"No notes yet — add your first one under Add",
-    s_lang:"Interface language", s_mode:"Quiz style", m_mix:"Auto", m_flip:"Flashcard", m_type:"Spelling", m_choice:"Multiple choice", m_listen:"Listen & spell",
-    s_mode_help:"The daily quiz only uses questions that mark themselves. Auto adapts to familiarity: notes you don't know yet get multiple choice; once you've got one right, you spell it (from the Chinese or from the audio). Flashcards only appear in free practice.",
+    s_lang:"Interface language", s_mode:"Quiz style", m_mix:"Auto", m_flip:"Flashcard", m_type:"Spelling", m_choice:"Multiple choice", m_listen:"Listen & spell", m_cloze:"Fill in the blank",
+    s_mode_help:"The daily quiz only uses questions that mark themselves. Auto adapts to familiarity: notes you don't know yet get multiple choice; once you've got one right, you spell it (from the meaning, from the audio, or by filling in its example sentence). Notes with an example get fill-in-the-blank more often. Flashcards only appear in free practice.",
+    s_auto:"Auto-play during quizzes", ap_off:"Off", ap_word:"Word", ap_both:"Word + example",
+    s_auto_help:"Multiple choice plays the word as the question appears; spelling and fill-in questions wait until you've answered so the audio doesn't give it away. Word + example reads the example sentence next.",
     s_max:"Max questions per quiz", s_remind:"Daily reminder",
     s_remind_help:"A web page can't send its own notifications, so the easiest way is a repeating daily event in your calendar.",
     s_cal:"Add to Google Calendar (daily)", cal_title:"📒 English review time", cal_body:"Open English Review and finish today's quiz",
@@ -397,7 +409,7 @@ function paintChrome(){
 /* ---------- state ---------- */
 const S = {
   cards: new Map(),
-  settings: { sessionMax: 30, mode: "mix", lang: LANG, rate: 1, volume: 1, accent: "en-US", tlang: "zh-TW", autoTr: true },
+  settings: { sessionMax: 30, mode: "mix", lang: LANG, rate: 1, volume: 1, accent: "en-US", tlang: "zh-TW", autoTr: true, autoPlay: "word" },
   stats: { days: {} },
   store: null, syncKey: "loading", noticeKey: null,
   view: "today", review: null,
@@ -691,6 +703,80 @@ function openFreePractice(){
 /* ---------- review session ---------- */
 function shuffle(a){ a = a.slice(); for (let i=a.length-1;i>0;i--){ const j = Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
 const canSpeak = () => { try{ return "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function"; }catch(e){ return false; } };
+/* ---------- cloze: find the note's English inside its example ---------- */
+function wordPat(w){
+  const lw = w.toLowerCase(), e = reEsc(lw), alts = [e + "(?:s|es|ed|d|ing|ly|er|est|'s)?"];
+  if (/e$/.test(lw) && lw.length > 2) alts.push(reEsc(lw.slice(0,-1)) + "(?:ing|ed|er|est)");
+  if (/[^aeiou]y$/.test(lw)) alts.push(reEsc(lw.slice(0,-1)) + "(?:ies|ied|ier|iest|ily)");
+  if (/[^aeiou][aeiou][bdgklmnprt]$/.test(lw)) alts.push(e + reEsc(lw.slice(-1)) + "(?:ing|ed|er|est)");
+  return "(?:" + alts.join("|") + ")";
+}
+function findCloze(c, text){
+  const front = (c.front || "").trim(), ex = (text != null ? text : (c.example || "").split(/\s*\/\s*/)[0]).trim();
+  if (!front || !ex || /[+…~/|]|\.\.\.|\b(sb|sth|someone|something|somebody|one's)\b/i.test(front)) return null;
+  const words = front.split(/\s+/);
+  if (!words.every(w => /^[A-Za-z'-]+$/.test(w)) || words.length > 6) return null;
+  const m = new RegExp("(^|[^A-Za-z'])(" + words.map(wordPat).join("\\s+") + ")(?![A-Za-z'])", "i").exec(ex);
+  if (!m) return null;
+  const start = m.index + m[1].length, target = m[2];
+  if (ex.split(/\s+/).length < words.length + 2) return null;
+  return { before: ex.slice(0, start), target, after: ex.slice(start + target.length), sentence: ex, src: "mine" };
+}
+function genFresh(c){ return Array.isArray(c.gen) && c.genFor === c.front ? c.gen : []; }
+function clozeOptions(c){
+  const out = [];
+  for (const g of genFresh(c)){
+    const i = g.text.indexOf(g.target);
+    if (g.target && i >= 0) out.push({ before: g.text.slice(0, i), target: g.target, after: g.text.slice(i + g.target.length), sentence: g.text, src: g.src || "ai" });
+  }
+  const own = findCloze(c); if (own) out.push(own);
+  return out;
+}
+function pickCloze(c){
+  const opts = clozeOptions(c); if (!opts.length) return null;
+  const fresh = opts.filter(o => o.src !== "mine" && o.sentence !== c.lastCz);       // prefer a new sentence over your own
+  const pool = fresh.length && S.settings.genEx !== false ? fresh : opts.filter(o => o.sentence !== c.lastCz).concat(opts.length === 1 ? opts : []);
+  const o = pool[Math.random()*pool.length|0] || opts[0];
+  const cur = S.cards.get(c.id);
+  if (cur && o.src !== "mine") saveCard({ ...cur, lastCz: o.sentence, genUsed: (cur.genUsed || 0) + 1 });
+  return o;
+}
+/* generate new example sentences: Claude AI when available, else free dictionary examples (GitHub version) */
+const genBusy = new Set();
+async function genExamples(cards){
+  if (S.settings.genEx === false) return;
+  const todo = cards.filter(c => !genBusy.has(c.id) && /[A-Za-z]/.test(c.front) && (!genFresh(c).length || (c.genUsed || 0) >= genFresh(c).length + 1)).slice(0, 20);
+  if (!todo.length) return;
+  todo.forEach(c => genBusy.add(c.id));
+  try{
+    if (S.sample){
+      const items = todo.map((c, i) => ({ i, en: c.front, meaning: c.back, mine: c.example || "" }));
+      const res = await S.sample.json(`You write fill-in-the-blank practice sentences for an English learner's flashcards.
+For EACH item below, write 3 NEW natural example sentences (8–18 words, everyday contexts, CEFR B1–B2), different from each other and from the learner's own example ("mine").
+Use the item in a natural form (inflections are fine, e.g. "procrastinating", "looked forward to"). If the item contains placeholders (sb, sth, something, one's, + V-ing, …), fill them naturally.
+"target" must be the exact, contiguous words in "text" that the learner should type: the item as used in the sentence (for items with placeholders, only the main fixed chunk, e.g. "for granted" or "looking forward to"). It must appear in "text" exactly, same capitalisation.
+Reply with only a JSON array: [{"i": 0, "sentences": [{"text": "...", "target": "..."}]}]
+
+Items: ${JSON.stringify(items)}`, { modelTier: "quick" });
+      (Array.isArray(res) ? res : []).forEach(r => {
+        const c = todo[r && r.i]; if (!c || !Array.isArray(r.sentences)) return;
+        const gen = r.sentences.map(x => ({ text: String(x && x.text || "").trim(), target: String(x && x.target || "").trim(), src: "ai" }))
+          .filter(x => x.text && x.target && x.text.includes(x.target) && x.text.length < 220).slice(0, 3);
+        const cur = S.cards.get(c.id); if (cur && gen.length) saveCard({ ...cur, gen, genFor: cur.front, genUsed: 0 });
+      });
+    } else if (STANDALONE && !isOffline()){
+      for (const c of todo){
+        if (!/^[A-Za-z'-]+$/.test(c.front.trim())) continue;
+        const d = await dictLookup(c.front.trim()).catch(() => null); if (!d) continue;
+        const exs = []; d.forEach(e => (e.meanings||[]).forEach(m => (m.definitions||[]).forEach(df => df.example && exs.push(df.example))));
+        const gen = []; for (const ex of exs){ const z = findCloze(c, ex); if (z && !gen.some(g => g.text === ex)) gen.push({ text: ex, target: z.target, src: "dict" }); if (gen.length >= 3) break; }
+        const cur = S.cards.get(c.id); if (cur && gen.length) saveCard({ ...cur, gen, genFor: cur.front, genUsed: 0 });
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }
+  }catch(e){ if (e && ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e.code)) S.sample = null; }
+  finally{ todo.forEach(c => genBusy.delete(c.id)); }
+}
 function pickMode(c, scheduled){
   const m = S.settings.mode;
   const canChoice = S.cards.size >= 4;
@@ -700,14 +786,17 @@ function pickMode(c, scheduled){
   if (m === "choice" && canChoice) return "choice";
   if (m === "type" && canType) return "type";
   if (m === "listen" && canListen) return "listen";
+  const canCloze = clozeOptions(c).length > 0;
+  if (m === "cloze" && canCloze) return "cloze";
   // auto: recognise first, then recall
-  const spell = [canType && "type", canListen && "listen"].filter(Boolean);
+  const spell = [canType && "type", canListen && "listen", canCloze && "cloze", canCloze && "cloze"].filter(Boolean);
   if (!scheduled && Math.random() < .3) return "flip";            // flashcards only in free practice
   if (stk(c) === 0 && canChoice) return "choice";
   if (spell.length) return pick(spell);
   return canChoice ? "choice" : (scheduled ? "type" : "flip");
 }
 function startReview(list, scheduled){
+  genExamples(list.slice(0, scheduled ? S.settings.sessionMax : 20).filter(c => stk(c) >= 1 || nRight(c) >= 1 || list.length <= 20));
   const queue = list.slice(0, scheduled ? S.settings.sessionMax : 20).map(c => c.id);
   S.review = { queue, scheduled, total: queue.length, done: 0, correct: 0, cur: null, state: "ask", mode: null, wrongIds: new Set(), seen: new Set() };
   nextQ();
@@ -718,7 +807,8 @@ function nextQ(){
   while (r.queue.length && !S.cards.has(r.queue[0])) r.queue.shift();
   if (!r.queue.length){ r.cur = null; r.state = "end"; return; }
   r.cur = r.queue.shift(); r.mode = pickMode(S.cards.get(r.cur), r.scheduled);
-  r.state = "ask"; r.result = null; r.typed = ""; r.choice = null; r.hint = false; r.change = null;
+  r.state = "ask"; r.result = null; r.typed = ""; r.choice = null; r.hint = false; r.change = null; r.form = false;
+  r.cloze = r.mode === "cloze" ? pickCloze(S.cards.get(r.cur)) : null;
   if (r.mode === "choice"){
     const c = S.cards.get(r.cur);
     const others = shuffle([...S.cards.values()].filter(x => x.id !== c.id && x.back !== c.back)).slice(0,3);
@@ -738,12 +828,12 @@ function pickVoice(lang){
 }
 try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; }catch(e){}
 function speakable(text){ return String(text||"").replace(/\.\.\.|[+…~～/|]/g, ", ").replace(/\b(sb|sth)\b/gi, m => m.toLowerCase()==="sb" ? "somebody" : "something").replace(/\bV-?ing\b/g, "doing").replace(/\bp\.p\./gi, "past participle"); }
-function speak(text, slow){
+function speak(text, slow, queue){
   try{
     const st = S.settings, u = new SpeechSynthesisUtterance(speakable(text));
     u.lang = st.accent || "en-US"; const v = pickVoice(u.lang); if (v) u.voice = v;
     u.rate = Math.max(.3, Math.min(2, (st.rate || 1) * (slow ? .6 : 1))); u.volume = st.volume ?? 1;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    if (!queue) speechSynthesis.cancel(); speechSynthesis.speak(u);
   }catch(e){ toast(t("no_speech")); }
 }
 function pronControls(){
@@ -832,6 +922,18 @@ function openPron(id){
   speak(c0.front);
 }
 
+function autoPlay(r, c, spell, cz){
+  const ap = S.settings.autoPlay || "word"; if (ap === "off") return;
+  const key = r.cur + ":" + r.state + ":" + r.done; if (r.spoken === key) return; r.spoken = key;
+  const ex = cz ? cz.sentence : (c.example || "").split(/\s*\/\s*/)[0];
+  if (r.state === "ask"){
+    if (r.mode === "choice" || r.mode === "flip") speak(c.front);         // spelling questions stay silent so the answer isn't given away
+  } else if (r.state === "shown"){
+    const first = spell;                                                 // word not heard yet in spelling modes
+    if (first) speak(c.front);
+    if (ap === "both" && ex) speak(ex, false, first);
+  }
+}
 function slotHint(front, reveal){
   return front.split(/\s+/).map(w => [...w].map((ch,i) => /[A-Za-z]/.test(ch) ? (reveal && i === 0 ? ch : "_") : ch).join(" ")).join("　 ");
 }
@@ -849,14 +951,17 @@ function renderReview(v){
     return;
   }
   const c = S.cards.get(r.cur);
-  const spell = r.mode === "type" || r.mode === "listen";
+  const spell = r.mode === "type" || r.mode === "listen" || r.mode === "cloze";
+  const cz = r.mode === "cloze" ? r.cloze : null;
+  const target = cz ? cz.target : c.front;
   const enWord = `<span class="tapword" data-pron="${esc(c.id)}">${esc(c.front)}</span><button class="speak" data-say title="${t("speak")}">🔊</button>`;
   let body = `<div class="qkind">${t("q_"+r.mode)}${r.scheduled?"":t("q_free")} · ${esc(tagName(c.tag))}</div>`;
   if (r.mode === "choice" || r.mode === "flip") body += `<div class="qmain en">${enWord}</div>`;
   if (r.mode === "type") body += `<div class="qmain zh">${esc(c.back)}</div>`;
+  if (cz) body += `<div class="cloze en">${esc(cz.before)}<span class="blank">${r.state === "ask" ? esc(slotHint(cz.target, r.hint)) : `<mark>${esc(cz.target)}</mark>`}</span>${esc(cz.after)}</div><div class="sub" style="margin-top:8px">${t("cz_mean")}${esc(c.back)}${r.state !== "ask" && cz.src !== "mine" ? ` · <span class="srcl">${t(cz.src === "dict" ? "cz_src_dict" : "cz_src_ai")}</span>` : ""}</div>`;
   if (r.mode === "listen") body += `<div class="hrow" style="justify-content:center;gap:10px"><button class="btn btn-primary" type="button" id="lPlay" style="font-size:22px;padding:14px 22px">🔊</button><button class="btn btn-soft" type="button" id="lSlow">🐢 ${t("p_slow")}</button></div>`;
   if (spell){
-    if (r.state === "ask") body += `<div class="slots en">${esc(slotHint(c.front, r.hint))}</div><div class="sub">${t("n_letters", (c.front.match(/[A-Za-z]/g)||[]).length)}</div>`;
+    if (r.state === "ask") body += cz ? `<div class="sub" style="margin-top:4px">${t("n_letters", (target.match(/[A-Za-z]/g)||[]).length)}</div>` : `<div class="slots en">${esc(slotHint(c.front, r.hint))}</div><div class="sub">${t("n_letters", (c.front.match(/[A-Za-z]/g)||[]).length)}</div>`;
     body += `<form id="tf" style="margin-top:14px"><input type="text" id="ti" class="en" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${t("type_ph")}" value="${esc(r.typed)}" ${r.state!=="ask"?"disabled":""} style="text-align:center;font-size:20px">
       ${r.state==="ask"?`<div class="hrow" style="justify-content:center;margin-top:10px"><button class="btn btn-primary" type="submit">${t("confirm")}</button>${r.hint?"":`<button class="btn btn-soft" type="button" id="hintBtn">💡 ${t("hint")}</button>`}<button class="btn btn-outline-primary" type="button" id="giveup">${t("dunno")}</button></div>`:""}</form>`;
   }
@@ -866,10 +971,10 @@ function renderReview(v){
   }
   if (r.mode === "flip" && r.state === "ask") body += `<div style="margin-top:22px"><button class="btn btn-primary" id="reveal">${t("reveal")}</button></div>`;
   if (r.state === "shown"){
-    if (r.result) body += `<div class="verdict ${r.result==="no"?"no":"ok"}">${t(r.result==="close" && r.hint && norm(r.typed)===norm(c.front) ? "v_hint" : "v_"+r.result)}</div>`;
-    if (spell && r.result !== "ok" && r.typed) body += `<div class="diff en">${diffHTML(r.typed, c.front)}</div>`;
+    if (r.result) body += `<div class="verdict ${r.result==="no"?"no":"ok"}">${r.form ? t("v_form", esc(target)) : t(r.result==="close" && r.hint && norm(r.typed)===norm(target) ? "v_hint" : "v_"+r.result)}</div>`;
+    if (spell && r.result !== "ok" && r.typed && !r.form) body += `<div class="diff en">${diffHTML(r.typed, target)}</div>`;
     body += `<div class="ans">${spell ? `<div class="qmain en" style="font-size:26px">${enWord}</div>${r.mode==="listen"?`<div class="zh">${esc(c.back)}</div>`:""}` : `<div class="zh">${esc(c.back)}</div>`}
-      ${c.example ? `<div class="ex en">${esc(c.example)}</div>`:""}${c.note ? `<div class="nt">${esc(c.note)}</div>`:""}</div>`;
+      ${c.example && !cz ? `<div class="ex en">${esc(c.example)}</div>`:""}${c.note ? `<div class="nt">${esc(c.note)}</div>`:""}</div>`;
     if (r.change) body += `<div class="change">${r.change}</div>`;
   }
   let foot = "";
@@ -882,16 +987,19 @@ function renderReview(v){
     <div class="card qcard">${body}</div>${foot}`;
   $("#quit").onclick = () => { S.review = null; location.hash = "today"; };
   v.querySelectorAll("[data-say]").forEach(b => b.onclick = e => { e.stopPropagation(); speak(c.front); });
+  if (cz && r.state === "shown") { const sp = document.createElement("button"); sp.className = "speak"; sp.textContent = "🔊"; sp.title = t("speak"); sp.onclick = () => speak(cz.sentence); v.querySelector(".cloze")?.appendChild(sp); }
   v.querySelectorAll("[data-pron]").forEach(w => w.onclick = e => { e.stopPropagation(); openPron(w.dataset.pron); });
   const lp = $("#lPlay"); if (lp) { lp.onclick = () => speak(c.front); $("#lSlow").onclick = () => speak(c.front, true); }
+  autoPlay(r, c, spell, cz);
   const rv = $("#reveal"); if (rv) rv.onclick = () => { r.state = "shown"; render(); };
   const tf = $("#tf");
   if (tf && r.state === "ask"){
     const ti = $("#ti"); setTimeout(()=>ti.focus(), 30);
     ti.oninput = () => { r.typed = ti.value; };
-    tf.onsubmit = e => { e.preventDefault(); const a = norm(ti.value), b = norm(c.front); if (!a) return;
+    tf.onsubmit = e => { e.preventDefault(); const a = norm(ti.value), b = norm(target); if (!a) return;
       r.typed = ti.value;
-      const res = a === b ? (r.hint ? "close" : "ok") : (b.length > 4 && lev(a,b) <= 1) ? "close" : "no";
+      let res = a === b ? (r.hint ? "close" : "ok") : (b.length > 4 && lev(a,b) <= 1) ? "close" : "no";
+      if (cz && res === "no" && a === norm(c.front)) { res = "close"; r.form = true; }   // right word, wrong form for this sentence
       answer(res); };
     const hb = $("#hintBtn"); if (hb) hb.onclick = () => { r.hint = true; render(); };
     $("#giveup").onclick = () => answer("no");
@@ -1335,9 +1443,14 @@ function renderSettings(v){
     <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px;margin-top:12px"><input type="checkbox" id="autoTr" ${S.settings.autoTr!==false?"checked":""}> ${t("s_tr_auto")}</label>
     ${canTranslate() ? (S.sample ? "" : `<p class="sub" style="margin:8px 0 0">${t("free_tr_note")}</p>`) : `<p class="notice" style="margin:10px 0 0">${t("noai_why")}</p>`}</div>
   <div class="card"><h2>${t("s_mode")}</h2>
-    <div class="seg" id="mode">${["mix","choice","type","listen"].map(k=>`<button class="${st.mode===k?"on":""}" data-m="${k}">${t("m_"+k)}</button>`).join("")}</div>
+    <div class="seg" id="mode">${["mix","choice","type","listen","cloze"].map(k=>`<button class="${st.mode===k?"on":""}" data-m="${k}">${t("m_"+k)}</button>`).join("")}</div>
     <p class="sub">${t("s_mode_help")}</p><label>${t("s_max")}</label>
-    <div class="seg" id="max">${[15,30,50,100].map(n=>`<button class="${st.sessionMax===n?"on":""}" data-n="${n}">${n}</button>`).join("")}</div></div>
+    <div class="seg" id="max">${[15,30,50,100].map(n=>`<button class="${st.sessionMax===n?"on":""}" data-n="${n}">${n}</button>`).join("")}</div>
+    <label>${t("s_auto")}</label>
+    <div class="seg" id="autoPlay">${["off","word","both"].map(k=>`<button class="${(st.autoPlay||"word")===k?"on":""}" data-a="${k}">${t("ap_"+k)}</button>`).join("")}</div>
+    <p class="sub" style="margin:6px 0 0">${t("s_auto_help")}</p>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px;margin-top:14px"><input type="checkbox" id="genEx" ${st.genEx!==false?"checked":""}> ${t("s_gen")}</label>
+    <p class="sub" style="margin:4px 0 0">${S.sample ? t("s_gen_ai") : STANDALONE ? t("s_gen_dict") : t("s_gen_none")}</p></div>
   <div class="card" id="pronCard"><h2>${t("s_pron")}</h2>${pronControls()}
     <div class="hrow" style="margin-top:12px"><button class="btn btn-soft btn-sm" type="button" id="pTest">▶ ${t("p_test")}</button>
     ${canPron() ? `<button class="btn btn-outline-primary btn-sm" type="button" id="fillPron">${S.sample ? t("p_fill") : t("p_fill_free")}</button>` : ""}</div>
@@ -1364,6 +1477,8 @@ function renderSettings(v){
   $("#autoTr").onchange = e => { S.settings.autoTr = e.target.checked; saveSettings(); };
   document.querySelectorAll("#mode button").forEach(b => b.onclick = () => { st.mode = b.dataset.m; saveSettings(); renderSettings(v); });
   document.querySelectorAll("#max button").forEach(b => b.onclick = () => { st.sessionMax = +b.dataset.n; saveSettings(); renderSettings(v); });
+  $("#genEx").onchange = e => { st.genEx = e.target.checked; saveSettings(); };
+  document.querySelectorAll("#autoPlay button").forEach(b => b.onclick = () => { st.autoPlay = b.dataset.a; saveSettings(); renderSettings(v); if (b.dataset.a !== "off") speak(b.dataset.a === "both" ? "resilient. She's remarkably resilient after setbacks." : "resilient"); });
   bindPronControls($("#pronCard"), "Practice makes perfect.");
   $("#pTest").onclick = () => speak("Practice makes perfect.");
   const fp = $("#fillPron");
