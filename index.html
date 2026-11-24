@@ -142,6 +142,16 @@ input[type=range]{accent-color:var(--accent)}
 .change b{color:var(--ink)}
 .diff{margin-top:8px;font-size:1.1rem}
 .dok{color:var(--bs-success)} .dno{color:var(--warn);text-decoration:underline wavy}
+.searchbar{position:sticky;top:58px;z-index:5;display:flex;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:2rem;padding:4px 6px 4px 14px;margin-bottom:.9rem;box-shadow:var(--shadow)}
+.searchbar:focus-within{border-color:#a2c1f6;box-shadow:0 0 0 .25rem rgba(69,130,236,.2)}
+.searchbar .sicon{font-size:.95rem;opacity:.6}
+.searchbar input[type=text]{border:0;box-shadow:none;padding:.45rem 0;background:transparent}
+.searchbar input[type=text]:focus{box-shadow:none}
+#qClear{border:0;background:var(--bg);color:var(--muted);width:28px;height:28px;border-radius:50%;flex:none;cursor:pointer;font-size:.8rem}
+mark{background:#fff3bf;color:inherit;padding:0 1px;border-radius:3px}
+.snip{font-size:.8rem;color:var(--muted);margin-top:2px}
+.sync.offb{background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)}
+body.offline #trBtn{opacity:.5}
 .hidden{display:none!important}
 @media (max-width:480px){.qmain{font-size:1.75rem}.big{font-size:2.5rem}.stat b{font-size:1.2rem}.stat span{font-size:.68rem}}
 </style>
@@ -150,7 +160,7 @@ input[type=range]{accent-color:var(--accent)}
 <div class="wrap">
   <header class="top">
     <h1><span id="appA" style="color:inherit">英文</span><span id="appB">複習本</span></h1>
-    <div class="hrow" style="gap:10px"><div class="sync" id="sync">載入中…</div><button class="btn btn-outline-primary btn-sm" id="langBtn" style="padding:4px 10px">EN</button></div>
+    <div class="hrow" style="gap:10px"><div class="sync" id="sync">載入中…</div><div class="sync offb hidden" id="offBadge">📴</div><button class="btn btn-outline-primary btn-sm" id="searchBtn" style="padding:4px 10px" title="搜尋">🔍</button><button class="btn btn-outline-primary btn-sm" id="langBtn" style="padding:4px 10px">EN</button></div>
   </header>
   <div id="notice" class="notice hidden"></div>
   <main id="view"></main>
@@ -218,6 +228,11 @@ const I18N = {
     fb_standalone:"你的筆記存在這個瀏覽器裡（只有你看得到）。換手機或清除瀏覽器資料前，記得先到「設定」複製備份。",
     free_tr_note:"使用免費翻譯服務（MyMemory），單字會從免費字典補上詞性。翻得不準的話可以自己修改。",
     p_fill_free:"幫全部筆記查音標（免費字典）", rec_us:"真人發音（美）", rec_uk:"真人發音（英）",
+    offline_badge:"離線", online:"已連線", went_offline:"目前離線：抽考、新增、筆記庫照常可用，翻譯和音標要等連線", back_online:"已恢復連線",
+    sw_ready:"✅ 已可離線使用", sw_update:"有新版本", sw_reload:"重新整理",
+    tr_offline:"離線中，無法自動翻譯。可以先自己填，或連線後按「翻譯」", p_offline:"離線中，無法查音標。發音播放仍可使用（用手機內建語音）。",
+    s_off:"離線使用", s_off_body:"第一次打開後，網頁會存在手機裡，之後沒網路也能打開。抽考、新增、編輯、筆記庫、發音播放都能離線使用；自動翻譯和查音標需要網路。筆記本來就存在這台裝置，離線時也不會遺失。",
+    s_off_ready:"離線檔案已準備好", s_off_now:"目前狀態",
     diag:"連線狀態", d_runtime:"1. 有連上 Claude", d_db:"2. 雲端儲存可用", d_user:"3. 有登入 Claude 帳號", d_ai:"4. AI 功能可用", diag_help:"有問題時，把這一區截圖給製作者。",
     s_tr:"翻譯語言", s_tr_help:"輸入英文時，自動翻譯成這個語言填進「意思」。批次貼上時 AI 補上的意思也會用這個語言。", s_tr_auto:"輸入英文後自動翻譯", tr_saved:n=>`之後會翻譯成${n}`, f_back_ph:"例：把…視為理所當然",
     f_tag:"類別", f_ex:"例句（選填）", f_note:"筆記（選填：用法、易混淆的字、在哪裡學到的…）",
@@ -236,7 +251,7 @@ const I18N = {
     edit_title:"編輯筆記", next_rev:(d,n)=>`下次複習：${d}`, not_yet:"還沒考過，今天就會出現",
     lapses:n=>`答錯 ${n} 次`, del:"刪除", del_sure:"確定刪除？", relearn:"重新學習", save:"儲存",
     deleted:"已刪除", reset_done:"已重設，今天會重新出題", saved:"已儲存",
-    search_ph:"搜尋英文、中文、例句或筆記…", all:"全部", all_lv:"所有程度", count:n=>`${n} 則`,
+    search_ph:"搜尋英文、意思、例句、筆記或音標…", found_n:(n,q)=>`「${q}」找到 ${n} 則`, lib_nomatch_q:q=>`找不到「${q}」`, add_from_q:q=>`新增「${q}」`, f_ex_s:"例句：", f_note_s:"筆記：", all:"全部", all_lv:"所有程度", count:n=>`${n} 則`,
     lib_nomatch:"沒有符合的筆記", lib_empty:"還沒有筆記，去「新增」加入第一則吧",
     s_lang:"介面語言", s_mode:"抽考方式", m_mix:"自動", m_flip:"翻卡", m_type:"拼寫", m_choice:"選擇題", m_listen:"聽音拼寫",
     s_mode_help:"每日抽考只出會自動對答案的題目。「自動」會依熟悉程度出題：還不熟的先考選擇題，答對過之後改考拼寫（看中文拼，或聽發音拼）。翻卡只會出現在自由練習。",
@@ -306,6 +321,11 @@ const I18N = {
     fb_standalone:"Your notes are saved in this browser (only you can see them). Copy a backup from Settings before switching phones or clearing browser data.",
     free_tr_note:"Uses a free translation service (MyMemory); single words get a part of speech from a free dictionary. Edit it if the translation is off.",
     p_fill_free:"Look up phonetics for all notes (free dictionary)", rec_us:"Recording (US)", rec_uk:"Recording (UK)",
+    offline_badge:"Offline", online:"Online", went_offline:"You're offline — quizzes, adding and the library still work; translation and phonetics need a connection", back_online:"Back online",
+    sw_ready:"✅ Ready to use offline", sw_update:"A new version is available", sw_reload:"Reload",
+    tr_offline:"Offline — can't translate automatically. Type it yourself, or tap Translate once you're back online", p_offline:"Offline — can't look up phonetics. Playback still works with your phone's built-in voice.",
+    s_off:"Offline use", s_off_body:"After the first visit the app is stored on your phone, so it opens without internet. Quizzes, adding, editing, the library and playback all work offline; auto-translate and phonetics need a connection. Your notes already live on this device, so nothing is lost offline.",
+    s_off_ready:"Offline files ready", s_off_now:"Right now",
     diag:"Connection status", d_runtime:"1. Connected to Claude", d_db:"2. Cloud storage available", d_user:"3. Signed in to Claude", d_ai:"4. AI available", diag_help:"If something isn't working, send a screenshot of this section to whoever made the page.",
     s_tr:"Translation language", s_tr_help:"When you type the English, its meaning is translated into this language. AI-filled meanings in Paste many use it too.", s_tr_auto:"Translate automatically after typing the English", tr_saved:n=>`Will translate to ${n} from now on`, f_back_ph:"e.g. 把…視為理所當然",
     f_tag:"Type", f_ex:"Example sentence (optional)", f_note:"Notes (optional: usage, look-alikes, where you saw it…)",
@@ -324,7 +344,7 @@ const I18N = {
     edit_title:"Edit note", next_rev:(d,n)=>`Next review: ${d}`, not_yet:"Not quizzed yet — it's due today",
     lapses:n=>`Forgotten ${n}×`, del:"Delete", del_sure:"Really delete?", relearn:"Relearn", save:"Save",
     deleted:"Deleted", reset_done:"Reset — it'll be quizzed again today", saved:"Saved",
-    search_ph:"Search English, Chinese, examples or notes…", all:"All", all_lv:"All levels", count:n=>`${n} notes`,
+    search_ph:"Search English, meanings, examples, notes or phonetics…", found_n:(n,q)=>`${n} found for “${q}”`, lib_nomatch_q:q=>`Nothing found for “${q}”`, add_from_q:q=>`Add “${q}”`, f_ex_s:"Example: ", f_note_s:"Note: ", all:"All", all_lv:"All levels", count:n=>`${n} notes`,
     lib_nomatch:"No matching notes", lib_empty:"No notes yet — add your first one under Add",
     s_lang:"Interface language", s_mode:"Quiz style", m_mix:"Auto", m_flip:"Flashcard", m_type:"Spelling", m_choice:"Multiple choice", m_listen:"Listen & spell",
     s_mode_help:"The daily quiz only uses questions that mark themselves. Auto adapts to familiarity: notes you don't know yet get multiple choice; once you've got one right, you spell it (from the Chinese or from the audio). Flashcards only appear in free practice.",
@@ -800,7 +820,8 @@ function openPron(id){
     if (h) { info.innerHTML = h; info.querySelectorAll("[data-audio]").forEach(b => b.onclick = () => playAudio(b.dataset.audio)); return true; }
     if (!canPron()) { info.innerHTML = `<div class="sub">${t("noai_pron")}</div><a class="btn btn-outline-primary btn-sm" style="margin-top:8px;display:inline-block;text-decoration:none" href="${dictUrl(c.front)}" target="_blank" rel="noopener">📖 ${t("dict")}</a>`; return true; }
     return false; };
-  if (!paint()){
+  if (!paint() && isOffline()) info.innerHTML = `<div class="sub">${t("p_offline")}</div>`;
+  else if (!paint()){
     info.innerHTML = `<div class="sub">${t("p_loading")}</div>`;
     const ctl = new AbortController(); m.addEventListener("remove", () => ctl.abort());
     (S.sample ? fetchPron([c0], ctl.signal) : freePron(c0, ctl.signal)).then(() => { if (document.body.contains(m) && !paint()) info.innerHTML = `<div class="sub">${t("p_fail")}</div>`; })
@@ -938,6 +959,7 @@ function bindTranslate(root, isNew){
   bk.addEventListener("input", () => { auto = false; if (st) st.textContent = ""; });
   const go = async force => {
     const f = fr.value.trim(); if (!f || !canTranslate()) return;
+    if (isOffline()) { st.textContent = t("tr_offline"); return; }
     if (!force && (bk.value.trim() && !auto || f === lastFront)) return;
     ctl?.abort(); ctl = new AbortController(); const my = ctl;
     lastFront = f; st.textContent = t("tr_working"); btn && (btn.disabled = true);
@@ -1073,6 +1095,8 @@ function renderAdd(v){
     <div id="addBulk" class="${S.addMode==="bulk"?"":"hidden"}"></div>
   </div><div class="card" id="recent"></div>`;
   bindChips("f-tag"); bindTranslate($("#addOne"), true);
+  if (S.prefill) { const fr = $("#f-front"); fr.value = S.prefill; S.prefill = null; S.addMode = "one"; $("#addOne").classList.remove("hidden"); $("#addBulk").classList.add("hidden");
+    document.querySelectorAll("#addMode button").forEach(x => x.classList.toggle("on", x.dataset.m === "one")); setTimeout(() => { fr.focus(); fr.blur(); $("#f-back").focus(); }, 60); }
   document.querySelectorAll("#addMode button").forEach(b => b.onclick = () => {
     S.addMode = b.dataset.m;
     document.querySelectorAll("#addMode button").forEach(x=>x.classList.toggle("on",x===b));
@@ -1176,7 +1200,35 @@ function renderRecent(){
   el.innerHTML = rec.length ? `<h2>${t("recent")}</h2><div class="list">${rec.map(itemHTML).join("")}</div>` : `<div class="sub">${t("recent_empty")}</div>`;
   bindItems(el);
 }
-function itemHTML(c){ const l = level(c);
+function searchTokens(q){ return norm(q).split(" ").filter(Boolean); }
+const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function tokHit(h, tok){ return /[a-z]/.test(tok) ? new RegExp("(^|[^a-z'])" + reEsc(tok)).test(h) : h.includes(tok); }
+function haystack(c){
+  return norm([c.front, c.back, c.example, c.note, c.ipa, c.pron && c.pron.us, I18N.zh["tag_"+c.tag], I18N.en["tag_"+c.tag]].filter(Boolean).join(" "));
+}
+function matchScore(c, toks){
+  const f = norm(c.front), b = norm(c.back), q = toks.join(" ");
+  if (f === q) return 0; if (f.startsWith(q)) return 1; if (toks.every(x => tokHit(f, x))) return 2;
+  if (toks.every(x => tokHit(b, x))) return 3; return 4;
+}
+function hl(text, toks){
+  let out = esc(text); if (!toks || !toks.length) return out;
+  const re = new RegExp(toks.map(x => /[a-z]/.test(x) ? "(?<![A-Za-z'])(" + reEsc(esc(x)) + ")" : "(" + reEsc(esc(x)) + ")").join("|"), "gi");
+  return out.replace(/(<[^>]*>)|([^<]+)/g, (m, tag, txt) => tag ? tag : txt.replace(re, m => "<mark>" + m + "</mark>"));
+}
+function snippet(c, toks){
+  if (!toks || !toks.length) return "";
+  const inMain = toks.every(x => tokHit(norm(c.front + " " + c.back), x)); if (inMain) return "";
+  for (const [k, v] of [["f_ex_s", c.example], ["f_note_s", c.note]]) {
+    if (v && toks.some(x => tokHit(norm(v), x))) {
+      const nv = String(v).replace(/\s+/g, " "); let i = Math.max(0, nv.toLowerCase().indexOf(toks[0]) - 20); if (i) i = nv.lastIndexOf(" ", i) + 1;
+      return `<div class="snip">${t(k)}${i ? "…" : ""}${hl(nv.slice(i, i + 70), toks)}${nv.length > i + 70 ? "…" : ""}</div>`;
+    }
+  }
+  return "";
+}
+function itemHTML(c, toks){ const l = level(c);
+  if (toks && toks.length) return `<div class="item" data-id="${esc(c.id)}"><div><div class="w en"><span class="tapword" data-pron="${esc(c.id)}">${hl(c.front, toks)}</span><span class="tagtxt">${esc(tagName(c.tag))}</span></div><div class="m">${hl(c.back, toks)}</div>${snippet(c, toks)}</div><span class="lvl l${l}">${lvName(l)}</span></div>`;
   return `<div class="item" data-id="${esc(c.id)}"><div><div class="w en"><span class="tapword" data-pron="${esc(c.id)}">${esc(c.front)}</span><span class="tagtxt">${esc(tagName(c.tag))}</span></div><div class="m">${esc(c.back)}</div></div><span class="lvl l${l}">${lvName(l)}</span></div>`; }
 function bindItems(root){
   root.querySelectorAll(".item").forEach(it => it.onclick = () => openEdit(it.dataset.id));
@@ -1206,8 +1258,9 @@ function renderLibrary(v){
   const F = S.libFilter;
   if (!S.sel) S.sel = { on: false, ids: new Set() };
   const SEL = S.sel;
-  v.innerHTML = `<div class="card"><input type="text" id="q" placeholder="${t("search_ph")}" value="${esc(F.q)}">
-    <div class="chips" style="margin-top:10px" id="ltag"><button class="chip ${F.tag==="*"?"on":""}" data-t="*">${t("all")}</button>${TAGS.map(tg=>`<button class="chip ${F.tag===tg?"on":""}" data-t="${tg}">${tagName(tg)}</button>`).join("")}</div>
+  v.innerHTML = `<div class="searchbar"><span class="sicon">🔍</span><input type="text" id="q" placeholder="${t("search_ph")}" value="${esc(F.q)}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><button type="button" id="qClear" class="${F.q ? "" : "hidden"}" aria-label="clear">✕</button></div>
+  <div class="card">
+    <div class="chips" id="ltag"><button class="chip ${F.tag==="*"?"on":""}" data-t="*">${t("all")}</button>${TAGS.map(tg=>`<button class="chip ${F.tag===tg?"on":""}" data-t="${tg}">${tagName(tg)}</button>`).join("")}</div>
     <div class="chips" style="margin-top:8px" id="llvl"><button class="chip ${F.lvl===-1?"on":""}" data-l="-1">${t("all_lv")}</button>${[0,1,2,3].map(i=>`<button class="chip ${F.lvl===i?"on":""}" data-l="${i}">${lvName(i)}</button>`).join("")}</div>
   </div>
   <div id="selbar"></div>
@@ -1229,19 +1282,26 @@ function renderLibrary(v){
     };
   };
   const draw = () => {
-    const q = norm(F.q);
+    const toks = searchTokens(F.q);
     items = [...S.cards.values()].filter(c => (F.tag === "*" || c.tag === F.tag) && (F.lvl === -1 || level(c) === F.lvl) &&
-      (!q || norm([c.front,c.back,c.example,c.note].join(" ")).includes(q))).sort((a,b)=>b.created-a.created);
+      (!toks.length || (h => toks.every(x => tokHit(h, x)))(haystack(c))));
+    if (toks.length) items.sort((a,b) => matchScore(a,toks) - matchScore(b,toks) || b.created - a.created); else items.sort((a,b)=>b.created-a.created);
     [...SEL.ids].forEach(id => { if (!S.cards.has(id)) SEL.ids.delete(id); });
-    $("#cnt").textContent = t("count", items.length);
-    $("#list").innerHTML = items.length ? items.map(c => SEL.on ? itemHTML(c).replace('<div class="item"', `<div class="item${SEL.ids.has(c.id)?" sel":""}"`).replace('"><div><div class="w', `" style="grid-template-columns:auto 1fr auto"><span class="ck">${SEL.ids.has(c.id)?"✓":""}</span><div><div class="w`) : itemHTML(c)).join("")
-      : `<div class="empty">${S.cards.size ? t("lib_nomatch") : t("lib_empty")}</div>`;
+    $("#cnt").textContent = toks.length ? t("found_n", items.length, F.q.trim()) : t("count", items.length);
+    $("#list").innerHTML = items.length ? items.map(c => SEL.on ? itemHTML(c, toks).replace('<div class="item"', `<div class="item${SEL.ids.has(c.id)?" sel":""}"`).replace('"><div><div class="w', `" style="grid-template-columns:auto 1fr auto"><span class="ck">${SEL.ids.has(c.id)?"✓":""}</span><div><div class="w`) : itemHTML(c, toks)).join("")
+      : `<div class="empty">${S.cards.size ? (toks.length ? t("lib_nomatch_q", esc(F.q.trim())) : t("lib_nomatch")) : t("lib_empty")}
+         ${toks.length && /[A-Za-z]/.test(F.q) ? `<div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="addFromQ">＋ ${t("add_from_q", esc(F.q.trim()))}</button></div>` : ""}</div>`;
+    const aq = $("#addFromQ"); if (aq) aq.onclick = () => { S.prefill = F.q.trim(); location.hash = "add"; };
     if (SEL.on) $("#list").querySelectorAll(".item").forEach(it => it.onclick = () => { const id = it.dataset.id; SEL.ids.has(id) ? SEL.ids.delete(id) : SEL.ids.add(id); draw(); });
     else bindItems($("#list"));
     drawBar();
   };
   $("#selToggle").onclick = () => { SEL.on = !SEL.on; SEL.ids.clear(); renderLibrary(v); };
-  $("#q").oninput = e => { F.q = e.target.value; draw(); };
+  const qi = $("#q"), qc = $("#qClear");
+  let qt; qi.oninput = () => { F.q = qi.value; qc.classList.toggle("hidden", !F.q); clearTimeout(qt); qt = setTimeout(draw, 120); };
+  qi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); qi.blur(); } if (e.key === "Escape") { qc.click(); } };
+  qc.onclick = () => { F.q = ""; qi.value = ""; qc.classList.add("hidden"); draw(); qi.focus(); };
+  if (S.focusSearch) { S.focusSearch = false; setTimeout(() => { qi.focus(); qi.select(); }, 50); }
   document.querySelectorAll("#ltag .chip").forEach(b => b.onclick = () => { F.tag = b.dataset.t; document.querySelectorAll("#ltag .chip").forEach(x=>x.classList.toggle("on",x===b)); draw(); });
   document.querySelectorAll("#llvl .chip").forEach(b => b.onclick = () => { F.lvl = +b.dataset.l; document.querySelectorAll("#llvl .chip").forEach(x=>x.classList.toggle("on",x===b)); draw(); });
   draw();
@@ -1291,6 +1351,9 @@ function renderSettings(v){
     <textarea id="impTxt" class="hidden" style="margin-top:10px;min-height:120px" placeholder="${t("paste_ph")}"></textarea>
     <div class="hrow hidden" id="impRow" style="margin-top:8px;justify-content:flex-end"><button class="btn btn-primary btn-sm" id="impGo">${t("import")}</button></div>
     <p class="sub" style="margin-top:12px">${t("store_where")}${S.store==="db"?t("store_db"):t("store_local")}</p></div>
+  ${STANDALONE ? `<div class="card"><h2>${t("s_off")}</h2><p class="sub" style="margin:0">${t("s_off_body")}</p>
+    <div class="pline"><span style="width:auto;flex:1">${t("s_off_ready")}</span><b>${"serviceWorker" in navigator && navigator.serviceWorker.controller ? "✅" : "…"}</b></div>
+    <div class="pline"><span style="width:auto;flex:1">${t("s_off_now")}</span><b>${isOffline() ? "📴 " + t("offline_badge") : "🌐 " + t("online")}</b></div></div>` : ""}
   <div class="card"><h2>${t("diag")}</h2>
     ${[["d_runtime",DIAG.runtime],["d_db",DIAG.db],["d_user",DIAG.userId],["d_ai",DIAG.sample ?? !!S.sample]].map(([k,v])=>`<div class="pline"><span style="width:auto;flex:1">${t(k)}</span><b>${v===true?"✅":v===false?"❌":"…"}</b></div>`).join("")}
     <p class="sub" style="margin:8px 0 0;font-size:12px;word-break:break-all">${esc(DIAG.ua)}</p>
@@ -1345,6 +1408,25 @@ function toast(msg, action, ms){
 }
 
 $("#langBtn").onclick = () => setLang(LANG === "zh" ? "en" : "zh");
+/* ---------- offline ---------- */
+const isOffline = () => typeof navigator.onLine === "boolean" && !navigator.onLine;
+function paintOnline(){
+  const off = isOffline();
+  document.body.classList.toggle("offline", off);
+  const ob = $("#offBadge"); if (ob) { ob.classList.toggle("hidden", !off); ob.textContent = t("offline_badge"); }
+}
+window.addEventListener("online", () => { paintOnline(); toast(t("back_online")); if (S.view === "add" || S.view === "settings") render(); });
+window.addEventListener("offline", () => { paintOnline(); toast(t("went_offline"), null, 3500); if (S.view === "add" || S.view === "settings") render(); });
+if (STANDALONE && "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    reg.addEventListener("updatefound", () => { const w = reg.installing; w && w.addEventListener("statechange", () => {
+      if (w.state === "installed" && navigator.serviceWorker.controller) toast(t("sw_update"), { label: t("sw_reload"), fn: () => location.reload() }, 10000);
+      if (w.state === "activated" && !navigator.serviceWorker.controller) toast(t("sw_ready"), null, 3500);
+    }); });
+  }).catch(() => {});
+}
+paintOnline();
+$("#searchBtn").onclick = () => { S.focusSearch = true; if (location.hash === "#library") { const q = $("#q"); if (q) { q.focus(); q.select(); window.scrollTo({ top: 0, behavior: "smooth" }); } } else location.hash = "library"; };
 document.documentElement.lang = LANG === "zh" ? "zh-Hant" : "en";
 paintChrome();
 route();
