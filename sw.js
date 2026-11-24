@@ -1,5 +1,5 @@
 /* 英文複習本 — offline support. Bump VERSION when shipping changes. */
-const VERSION = "v4-2026-11-24";
+const VERSION = "v5-2026-11-24";
 const CORE = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 const APP = "app-" + VERSION, FONTS = "fonts-v1";
 self.addEventListener("install", e => { e.waitUntil(caches.open(APP).then(c => c.addAll(CORE))); self.skipWaiting(); });
